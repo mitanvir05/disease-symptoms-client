@@ -1,13 +1,19 @@
-import { useState } from 'react';
-import axios from 'axios';
-import { Stethoscope, MapPin, Activity, AlertCircle, Loader2 } from 'lucide-react';
+import { useState } from "react";
+import axios from "axios";
+import {
+  Stethoscope,
+  MapPin,
+  Activity,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
 
 function App() {
-  const [symptoms, setSymptoms] = useState('');
+  const [symptoms, setSymptoms] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [location, setLocation] = useState(null);
-  const [locationStatus, setLocationStatus] = useState('Not shared');
+  const [locationStatus, setLocationStatus] = useState("Not shared");
 
   // 1. Function to get User's Location
   const handleGetLocation = () => {
@@ -15,17 +21,17 @@ function App() {
       alert("Geolocation is not supported by your browser");
       return;
     }
-    setLocationStatus('Locating...');
+    setLocationStatus("Locating...");
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setLocation({
           lat: position.coords.latitude,
-          lng: position.coords.longitude
+          lng: position.coords.longitude,
         });
-        setLocationStatus('Location Found ✅');
+        setLocationStatus("Location Found ✅");
       },
       () => {
-        setLocationStatus('Permission Denied ❌');
+        setLocationStatus("Permission Denied ❌");
       }
     );
   };
@@ -41,9 +47,9 @@ function App() {
     try {
       // Send data to your Node.js backend
       // Make sure http://localhost:5000 matches your server port
-      const response = await axios.post('http://localhost:5000/api/analyze', {
+      const response = await axios.post("http://localhost:5000/api/analyze", {
         symptoms,
-        userLocation: location
+        userLocation: location,
       });
 
       setResult(response.data);
@@ -58,14 +64,17 @@ function App() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 font-sans p-6">
       <div className="max-w-4xl mx-auto space-y-8">
-        
         {/* Header */}
         <header className="text-center space-y-2">
           <div className="inline-flex items-center justify-center p-3 bg-blue-600 rounded-full shadow-lg mb-4">
             <Stethoscope className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-slate-900">AI Patient Triage System</h1>
-          <p className="text-slate-500">Describe your symptoms to find the right specialist nearby.</p>
+          <h1 className="text-3xl font-bold text-slate-900">
+            AI Patient Triage System
+          </h1>
+          <p className="text-slate-500">
+            Describe your symptoms to find the right specialist nearby.
+          </p>
         </header>
 
         {/* Input Form */}
@@ -89,11 +98,15 @@ function App() {
                 type="button"
                 onClick={handleGetLocation}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
-                  location ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  location
+                    ? "bg-green-100 text-green-700"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
                 <MapPin className="w-4 h-4" />
-                {locationStatus === 'Not shared' ? 'Enable Location for Better Results' : locationStatus}
+                {locationStatus === "Not shared"
+                  ? "Enable Location for Better Results"
+                  : locationStatus}
               </button>
 
               {/* Submit Button */}
@@ -121,23 +134,78 @@ function App() {
         {/* Results Section */}
         {result && (
           <div className="space-y-6 animate-fade-in">
-            
             {/* AI Diagnosis Card */}
-            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 p-6 rounded-2xl border border-indigo-100">
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-start gap-4">
-                <div className="p-3 bg-white rounded-lg shadow-sm">
-                  <AlertCircle className="w-6 h-6 text-indigo-600" />
+                <div
+                  className={`p-3 rounded-lg shadow-sm ${
+                    result.analysis.specialty === "General Medicine"
+                      ? "bg-orange-100"
+                      : "bg-blue-100"
+                  }`}
+                >
+                  <Activity
+                    className={`w-6 h-6 ${
+                      result.analysis.specialty === "General Medicine"
+                        ? "text-orange-600"
+                        : "text-blue-600"
+                    }`}
+                  />
                 </div>
-                <div>
-                  <h2 className="text-xl font-bold text-indigo-900 mb-1">
-                    Recommended Specialty: {result.analysis.specialty}
-                  </h2>
-                  <p className="text-indigo-700 leading-relaxed">
+
+                <div className="flex-1">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h2 className="text-xl font-bold text-slate-900">
+                        Recommended: {result.analysis.specialty}
+                      </h2>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600 uppercase tracking-wide">
+                          Urgency: {result.analysis.urgency}
+                        </span>
+
+                        {/* THE NEW ML VALIDATION BADGE */}
+                        {result.analysis.validation && (
+                          <span
+                            className={`text-xs font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${
+                              result.analysis.validation.includes("Consensus")
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                            }`}
+                          >
+                            {result.analysis.validation.includes("Consensus")
+                              ? "✅ Verified"
+                              : "⚠️ AI-ML Divergence"}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-slate-600 mt-3 leading-relaxed">
                     {result.analysis.reasoning}
                   </p>
-                  <div className="mt-3 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-white text-indigo-600 border border-indigo-200 uppercase tracking-wide">
-                    Urgency: {result.analysis.urgency}
-                  </div>
+
+                  {/* Show Detailed Validation Message */}
+                  {result.analysis.validation && (
+                    <div className="mt-4 p-3 bg-slate-50 rounded-lg text-sm border border-slate-100">
+                      <p className="font-semibold text-slate-700 mb-1 flex items-center gap-2">
+                        <Activity className="w-3 h-3" /> Hybrid System Analysis:
+                      </p>
+                      <p className="text-slate-600">
+                        {result.analysis.validation}
+                      </p>
+                      {result.analysis.ml_data && (
+                        <p className="text-xs text-slate-400 mt-1">
+                          (ML Confidence:{" "}
+                          {(result.analysis.ml_data.confidence * 100).toFixed(
+                            1
+                          )}
+                          %)
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -148,16 +216,25 @@ function App() {
                 <MapPin className="w-5 h-5 text-blue-500" />
                 Nearest Specialists
               </h3>
-              
+
               {result.doctors.length > 0 ? (
                 <div className="grid md:grid-cols-2 gap-4">
                   {result.doctors.map((doc) => (
-                    <div key={doc._id} className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition">
+                    <div
+                      key={doc._id}
+                      className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition"
+                    >
                       <div className="flex justify-between items-start">
                         <div>
-                          <h4 className="font-bold text-slate-800">{doc.name}</h4>
-                          <p className="text-sm text-blue-600 font-medium mb-1">{doc.specialty}</p>
-                          <p className="text-sm text-slate-500">{doc.hospital}</p>
+                          <h4 className="font-bold text-slate-800">
+                            {doc.name}
+                          </h4>
+                          <p className="text-sm text-blue-600 font-medium mb-1">
+                            {doc.specialty}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            {doc.hospital}
+                          </p>
                         </div>
                         <span className="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded">
                           {doc.city}
@@ -174,7 +251,6 @@ function App() {
             </div>
           </div>
         )}
-
       </div>
     </div>
   );

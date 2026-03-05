@@ -6,7 +6,24 @@ import {
   Activity,
   AlertCircle,
   Loader2,
+  Navigation
 } from "lucide-react";
+
+// --- NEW: Function to calculate distance in Kilometers (Haversine Formula) ---
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+  
+  const R = 6371; // Radius of the Earth in kilometers
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2); 
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
+  const distance = R * c; 
+  
+  return distance.toFixed(1); // Returns distance with 1 decimal place
+};
 
 function App() {
   const [symptoms, setSymptoms] = useState("");
@@ -45,8 +62,6 @@ function App() {
     setResult(null);
 
     try {
-      // Send data to your Node.js backend
-      // Make sure http://localhost:5000 matches your server port
       const response = await axios.post("http://localhost:5000/api/analyze", {
         symptoms,
         userLocation: location,
@@ -164,7 +179,6 @@ function App() {
                           Urgency: {result.analysis.urgency}
                         </span>
 
-                        {/* THE NEW ML VALIDATION BADGE */}
                         {result.analysis.validation && (
                           <span
                             className={`text-xs font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${
@@ -186,7 +200,6 @@ function App() {
                     {result.analysis.reasoning}
                   </p>
 
-                  {/* Show Detailed Validation Message */}
                   {result.analysis.validation && (
                     <div className="mt-4 p-3 bg-slate-50 rounded-lg text-sm border border-slate-100">
                       <p className="font-semibold text-slate-700 mb-1 flex items-center gap-2">
@@ -219,29 +232,56 @@ function App() {
 
               {result.doctors.length > 0 ? (
                 <div className="grid md:grid-cols-2 gap-4">
-                  {result.doctors.map((doc) => (
-                    <div
-                      key={doc._id}
-                      className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-bold text-slate-800">
-                            {doc.name}
-                          </h4>
-                          <p className="text-sm text-blue-600 font-medium mb-1">
-                            {doc.specialty}
-                          </p>
-                          <p className="text-sm text-slate-500">
-                            {doc.hospital}
-                          </p>
+                  {result.doctors.map((doc) => {
+                    // --- NEW: Calculate distance for this specific doctor ---
+                    let distanceInKm = null;
+                    if (location && doc.location && doc.location.coordinates) {
+                      // MongoDB stores coordinates as [longitude, latitude]
+                      const doctorLng = doc.location.coordinates[0];
+                      const doctorLat = doc.location.coordinates[1];
+                      
+                      distanceInKm = calculateDistance(
+                        location.lat, 
+                        location.lng, 
+                        doctorLat, 
+                        doctorLng
+                      );
+                    }
+
+                    return (
+                      <div
+                        key={doc._id}
+                        className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1 pr-2">
+                            <h4 className="font-bold text-slate-800">
+                              {doc.name}
+                            </h4>
+                            <p className="text-sm text-blue-600 font-medium mb-1">
+                              {doc.specialty}
+                            </p>
+                            <p className="text-sm text-slate-500 line-clamp-2">
+                              {doc.hospital}
+                            </p>
+                          </div>
+                          
+                          {/* --- NEW: Adjusted UI to stack City and Distance nicely --- */}
+                          <div className="flex flex-col items-end gap-2 shrink-0">
+                            <span className="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded whitespace-nowrap">
+                              {doc.city}
+                            </span>
+                            
+                            {distanceInKm && (
+                              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 flex items-center gap-1 whitespace-nowrap">
+                                <Navigation className="w-3 h-3" /> {distanceInKm} km
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <span className="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded">
-                          {doc.city}
-                        </span>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center p-8 bg-white rounded-xl border border-slate-200 border-dashed text-slate-500">

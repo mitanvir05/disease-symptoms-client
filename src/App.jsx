@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import axios from "axios";
 import {
   Stethoscope,
@@ -6,24 +6,11 @@ import {
   Activity,
   AlertCircle,
   Loader2,
-  Navigation
+  Navigation,
+  Car,
+  Mic,       // <-- New Icon
+  MicOff     // <-- New Icon
 } from "lucide-react";
-
-// --- NEW: Function to calculate distance in Kilometers (Haversine Formula) ---
-const calculateDistance = (lat1, lon1, lat2, lon2) => {
-  if (!lat1 || !lon1 || !lat2 || !lon2) return null;
-  
-  const R = 6371; // Radius of the Earth in kilometers
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a = 
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * Math.sin(dLon / 2) * Math.sin(dLon / 2); 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); 
-  const distance = R * c; 
-  
-  return distance.toFixed(1); // Returns distance with 1 decimal place
-};
 
 function App() {
   const [symptoms, setSymptoms] = useState("");
@@ -31,6 +18,10 @@ function App() {
   const [result, setResult] = useState(null);
   const [location, setLocation] = useState(null);
   const [locationStatus, setLocationStatus] = useState("Not shared");
+
+  // --- NEW: Voice-to-Text State ---
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
 
   // 1. Function to get User's Location
   const handleGetLocation = () => {
@@ -53,10 +44,62 @@ function App() {
     );
   };
 
+  // --- NEW: Voice Recognition Function ---
+  const toggleVoiceInput = () => {
+    if (isListening) {
+      // Stop listening if already active
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    // Check browser support
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Voice input is not supported in this browser. Please use Google Chrome.");
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+
+    recognition.continuous = true;   // Keep listening until user stops it
+    recognition.interimResults = true; // Show words as they are being spoken
+
+    recognition.onstart = () => {
+      setIsListening(true);
+    };
+
+    recognition.onresult = (event) => {
+      let currentTranscript = "";
+      for (let i = 0; i < event.results.length; i++) {
+        currentTranscript += event.results[i][0].transcript;
+      }
+      setSymptoms(currentTranscript);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech recognition error:", event.error);
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.start();
+  };
+
   // 2. Function to Submit Data to Backend
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!symptoms.trim()) return;
+
+    // Stop listening if user submits while mic is on
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+    }
 
     setLoading(true);
     setResult(null);
@@ -95,16 +138,45 @@ function App() {
         {/* Input Form */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
           <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* --- UPDATED: Textarea with embedded Mic Button --- */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                What are your symptoms?
-              </label>
-              <textarea
-                className="w-full p-4 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition h-32 resize-none"
-                placeholder="Ex: I have a severe headache on one side, sensitivity to light, and nausea..."
-                value={symptoms}
-                onChange={(e) => setSymptoms(e.target.value)}
-              />
+              <div className="flex justify-between items-end mb-2">
+                <label className="block text-sm font-medium text-slate-700">
+                  What are your symptoms?
+                </label>
+                {isListening && (
+                  <span className="text-xs font-bold text-red-500 animate-pulse flex items-center gap-1">
+                    <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                    Listening...
+                  </span>
+                )}
+              </div>
+
+              <div className="relative">
+                <textarea
+                  className={`w-full p-4 pr-14 rounded-xl border transition h-32 resize-none ${isListening
+                      ? "border-red-300 ring-4 ring-red-50 bg-red-50/10"
+                      : "border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    }`}
+                  placeholder="Ex: I have a severe headache on one side, sensitivity to light, and nausea..."
+                  value={symptoms}
+                  onChange={(e) => setSymptoms(e.target.value)}
+                />
+
+                {/* Microphone Toggle Button */}
+                <button
+                  type="button"
+                  onClick={toggleVoiceInput}
+                  className={`absolute bottom-3 right-3 p-2.5 rounded-full transition-all duration-200 ${isListening
+                      ? "bg-red-500 text-white hover:bg-red-600 shadow-md animate-pulse"
+                      : "bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-600"
+                    }`}
+                  title={isListening ? "Stop listening" : "Click to speak"}
+                >
+                  {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                </button>
+              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -112,11 +184,10 @@ function App() {
               <button
                 type="button"
                 onClick={handleGetLocation}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
-                  location
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${location
                     ? "bg-green-100 text-green-700"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
+                  }`}
               >
                 <MapPin className="w-4 h-4" />
                 {locationStatus === "Not shared"
@@ -153,18 +224,16 @@ function App() {
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
               <div className="flex items-start gap-4">
                 <div
-                  className={`p-3 rounded-lg shadow-sm ${
-                    result.analysis.specialty === "General Medicine"
+                  className={`p-3 rounded-lg shadow-sm ${result.analysis.specialty === "General Medicine"
                       ? "bg-orange-100"
                       : "bg-blue-100"
-                  }`}
+                    }`}
                 >
                   <Activity
-                    className={`w-6 h-6 ${
-                      result.analysis.specialty === "General Medicine"
+                    className={`w-6 h-6 ${result.analysis.specialty === "General Medicine"
                         ? "text-orange-600"
                         : "text-blue-600"
-                    }`}
+                      }`}
                   />
                 </div>
 
@@ -181,11 +250,10 @@ function App() {
 
                         {result.analysis.validation && (
                           <span
-                            className={`text-xs font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${
-                              result.analysis.validation.includes("Consensus")
+                            className={`text-xs font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${result.analysis.validation.includes("Consensus")
                                 ? "bg-green-50 text-green-700 border-green-200"
                                 : "bg-yellow-50 text-yellow-700 border-yellow-200"
-                            }`}
+                              }`}
                           >
                             {result.analysis.validation.includes("Consensus")
                               ? "✅ Verified"
@@ -233,21 +301,6 @@ function App() {
               {result.doctors.length > 0 ? (
                 <div className="grid md:grid-cols-2 gap-4">
                   {result.doctors.map((doc) => {
-                    // --- NEW: Calculate distance for this specific doctor ---
-                    let distanceInKm = null;
-                    if (location && doc.location && doc.location.coordinates) {
-                      // MongoDB stores coordinates as [longitude, latitude]
-                      const doctorLng = doc.location.coordinates[0];
-                      const doctorLat = doc.location.coordinates[1];
-                      
-                      distanceInKm = calculateDistance(
-                        location.lat, 
-                        location.lng, 
-                        doctorLat, 
-                        doctorLng
-                      );
-                    }
-
                     return (
                       <div
                         key={doc._id}
@@ -265,17 +318,21 @@ function App() {
                               {doc.hospital}
                             </p>
                           </div>
-                          
-                          {/* --- NEW: Adjusted UI to stack City and Distance nicely --- */}
+
                           <div className="flex flex-col items-end gap-2 shrink-0">
                             <span className="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded whitespace-nowrap">
                               {doc.city}
                             </span>
-                            
-                            {distanceInKm && (
-                              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 flex items-center gap-1 whitespace-nowrap">
-                                <Navigation className="w-3 h-3" /> {distanceInKm} km
-                              </span>
+
+                            {doc.drivingTimeMins && doc.drivingDistanceKm && (
+                              <div className="flex flex-col items-end gap-1">
+                                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 flex items-center gap-1 whitespace-nowrap">
+                                  <Car className="w-3 h-3" /> {doc.drivingTimeMins} min drive
+                                </span>
+                                <span className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                                  <Navigation className="w-3 h-3" /> {doc.drivingDistanceKm} km
+                                </span>
+                              </div>
                             )}
                           </div>
                         </div>

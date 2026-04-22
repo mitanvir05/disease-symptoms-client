@@ -8,8 +8,8 @@ import {
   Loader2,
   Navigation,
   Car,
-  Mic,       // <-- New Icon
-  MicOff     // <-- New Icon
+  Mic,
+  MicOff
 } from "lucide-react";
 
 function App() {
@@ -63,8 +63,8 @@ function App() {
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
 
-    recognition.continuous = true;   // Keep listening until user stops it
-    recognition.interimResults = true; // Show words as they are being spoken
+    recognition.continuous = true;
+    recognition.interimResults = true;
 
     recognition.onstart = () => {
       setIsListening(true);
@@ -128,7 +128,8 @@ function App() {
             <Stethoscope className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-slate-900">
-            AI Patient Triage System
+            A Hybrid AI and Geospatial Routing System for
+            Automated Patient Triage
           </h1>
           <p className="text-slate-500">
             Describe your symptoms to find the right specialist nearby.
@@ -139,7 +140,7 @@ function App() {
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
           <form onSubmit={handleSubmit} className="space-y-4">
 
-            {/* --- UPDATED: Textarea with embedded Mic Button --- */}
+            {/*  Textarea with embedded Mic Button --- */}
             <div>
               <div className="flex justify-between items-end mb-2">
                 <label className="block text-sm font-medium text-slate-700">
@@ -156,8 +157,8 @@ function App() {
               <div className="relative">
                 <textarea
                   className={`w-full p-4 pr-14 rounded-xl border transition h-32 resize-none ${isListening
-                      ? "border-red-300 ring-4 ring-red-50 bg-red-50/10"
-                      : "border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    ? "border-red-300 ring-4 ring-red-50 bg-red-50/10"
+                    : "border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     }`}
                   placeholder="Ex: I have a severe headache on one side, sensitivity to light, and nausea..."
                   value={symptoms}
@@ -169,8 +170,8 @@ function App() {
                   type="button"
                   onClick={toggleVoiceInput}
                   className={`absolute bottom-3 right-3 p-2.5 rounded-full transition-all duration-200 ${isListening
-                      ? "bg-red-500 text-white hover:bg-red-600 shadow-md animate-pulse"
-                      : "bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-600"
+                    ? "bg-red-500 text-white hover:bg-red-600 shadow-md animate-pulse"
+                    : "bg-slate-100 text-slate-500 hover:bg-blue-100 hover:text-blue-600"
                     }`}
                   title={isListening ? "Stop listening" : "Click to speak"}
                 >
@@ -185,8 +186,8 @@ function App() {
                 type="button"
                 onClick={handleGetLocation}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${location
-                    ? "bg-green-100 text-green-700"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  ? "bg-green-100 text-green-700"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   }`}
               >
                 <MapPin className="w-4 h-4" />
@@ -225,14 +226,14 @@ function App() {
               <div className="flex items-start gap-4">
                 <div
                   className={`p-3 rounded-lg shadow-sm ${result.analysis.specialty === "General Medicine"
-                      ? "bg-orange-100"
-                      : "bg-blue-100"
+                    ? "bg-orange-100"
+                    : "bg-blue-100"
                     }`}
                 >
                   <Activity
                     className={`w-6 h-6 ${result.analysis.specialty === "General Medicine"
-                        ? "text-orange-600"
-                        : "text-blue-600"
+                      ? "text-orange-600"
+                      : "text-blue-600"
                       }`}
                   />
                 </div>
@@ -251,8 +252,8 @@ function App() {
                         {result.analysis.validation && (
                           <span
                             className={`text-xs font-bold px-2 py-0.5 rounded border flex items-center gap-1 ${result.analysis.validation.includes("Consensus")
-                                ? "bg-green-50 text-green-700 border-green-200"
-                                : "bg-yellow-50 text-yellow-700 border-yellow-200"
+                              ? "bg-green-50 text-green-700 border-green-200"
+                              : "bg-yellow-50 text-yellow-700 border-yellow-200"
                               }`}
                           >
                             {result.analysis.validation.includes("Consensus")
@@ -275,16 +276,7 @@ function App() {
                       </p>
                       <p className="text-slate-600">
                         {result.analysis.validation}
-                      </p>
-                      {result.analysis.ml_data && (
-                        <p className="text-xs text-slate-400 mt-1">
-                          (ML Confidence:{" "}
-                          {(result.analysis.ml_data.confidence * 100).toFixed(
-                            1
-                          )}
-                          %)
-                        </p>
-                      )}
+                      </p> 
                     </div>
                   )}
                 </div>
